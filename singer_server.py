@@ -1,6 +1,33 @@
 
 import time
 import serial
+import socketserver
+
+
+class SignerServer:
+
+    class SignerServerHandler(socketserver.BaseRequestHandler):
+        def handle(self):
+            self.data = self.request.recv(2)
+
+            print('Got event')
+
+    def __init__(self):
+        pass
+
+    def __enter__(self):
+        self.server = socketserver.TCPServer(('127.0.0.1', 1969), SignerServerHandler)
+        self.kobuki = Kobuki()
+        self.kobuki.connect()
+        self.kobuki.play_note(50)
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.server.server_close()
+        self.kobuki.close()
+
+    def serve(self):
+        self.server.serve_forever()
 
 
 class Kobuki:
@@ -26,15 +53,21 @@ class Kobuki:
         pass
 
     def __enter__(self):
+        self.connect()
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.close()
+
+    def connect(self):
         self.comm  = serial.Serial(
             port='/dev/kobuki',
             baudrate=115200,
             parity=serial.PARITY_NONE,
             stopbits=serial.STOPBITS_ONE,
             bytesize=serial.EIGHTBITS)
-        return self
 
-    def __exit__(self, exc_type, exc_value, traceback):
+    def close(self):
         self.comm.close()
 
     def bytes_of_note(self, note):
@@ -80,7 +113,6 @@ class Kobuki:
         self.comm.write(payload)
         time.sleep(0.012)
 
-
-with Kobuki() as kobuki:
-    while True:
-        kobuki.play_note(49)
+if __name__ == '__main__':
+    with SignerServer() as server:
+        server.serve()
