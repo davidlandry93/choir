@@ -2,6 +2,7 @@
 import time
 import serial
 import socketserver
+import threading
 
 
 class SignerServer:
@@ -12,11 +13,24 @@ class SignerServer:
 
             print('Got event')
 
+        def start_playing_note(self, note):
+            self.keep_playing = True
+            self.handle = threading.thread(target=self.play_note_continuously, args=(note))
+            self.handle.start()
+
+        def stop_playing_note(self):
+            self.keep_playing = False
+            self.handle.join()
+
+        def play_note_continuously(self, note):
+            while self.keep_playing:
+                self.server.kobuki.play_note(note)
+
     def __init__(self):
         pass
 
     def __enter__(self):
-        self.server = socketserver.TCPServer(('127.0.0.1', 1969), SignerServerHandler)
+        self.server = socketserver.TCPServer(('127.0.0.1', 1969), self.SignerServerHandler)
         self.kobuki = Kobuki()
         self.kobuki.connect()
         self.kobuki.play_note(50)
@@ -114,9 +128,6 @@ class Kobuki:
         time.sleep(0.012)
 
 if __name__ == '__main__':
-
-    with Kobuki() as signer:
-        signer.play_note(50)
 
     with SignerServer() as server:
         server.serve()
