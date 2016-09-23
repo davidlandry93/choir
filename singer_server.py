@@ -8,52 +8,67 @@ import threading
 class SignerServer:
 
     class SignerServerHandler(socketserver.BaseRequestHandler):
-        def __init__(self):
-            self.handle = None
-
         def handle(self):
-            print('Got event')
-            self.str_of_request = self.request.recv(8)
+            while True:
+                data = self.request.recv(2)
 
-            note = self.str_of_request[0:2]
-            start_or_stop = self.str_of_request[3]
+                if not data:
+                    time.sleep(0.01)
+                    continue
 
-            if start_or_stop == '1':
-                if self.note_is_playing():
-                    self.stop_playing_note
-                self.start_playing_note(note)
-            elif start_or_stop == '0':
-                self.stop_playing_note()
+                print('Got event')
+
+                print(data)
+                type(data)
+
+                note = (int.from_bytes(data, byteorder='big') & 0xFF00) >> 8
+                print(note)
+
+                start_or_stop = int.from_bytes(data, byteorder='big') & 0x00FF
+                print(start_or_stop)
+
+                print('{} note {}'.format(note, start_or_stop))
+
+                if start_or_stop == 1:
+                    if self.note_is_playing():
+                        self.stop_playing_note
+                    self.start_playing_note(note)
+                elif start_or_stop == 0:
+                    self.stop_playing_note()
 
         def start_playing_note(self, note):
-            self.keep_playing = True
-            self.handle = threading.thread(target=self.play_note_continuously, args=(note))
-            self.handle.start()
+            self.server.keep_playing = True
+            self.server.note_thread = threading.Thread(target=self.play_note_continuously, args=(note,))
+            self.server.note_thread.start()
 
         def stop_playing_note(self):
-            self.keep_playing = False
-            self.handle.join()
+            print('Setting keep playing to false')
+            self.server.keep_playing = False
+            print('Done. Joining')
+            #self.server.note_thread.join()
 
         def play_note_continuously(self, note):
-            while self.keep_playing:
+            while self.server.keep_playing:
                 self.server.kobuki.play_note(note)
 
         def note_is_playing(self):
-            return self.handle != None and self.keep_playing
+            return self.server.note_thread != None and self.server.keep_playing
 
     def __init__(self):
         pass
 
     def __enter__(self):
-        self.server = socketserver.TCPServer(('127.0.0.1', 1969), self.SignerServerHandler)
-        self.kobuki = Kobuki()
-        self.kobuki.connect()
-        self.kobuki.play_note(50)
+        self.server = socketserver.TCPServer(('0.0.0.0', 1986), self.SignerServerHandler)
+        self.server.keep_playing = False
+        self.server.kobuki = Kobuki()
+        self.server.kobuki.connect()
+        self.server.kobuki.play_note(50)
+        self.server.note_thread = None
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
         self.server.server_close()
-        self.kobuki.close()
+        self.server.kobuki.close()
 
     def serve(self):
         self.server.serve_forever()
@@ -61,22 +76,6 @@ class SignerServer:
 
 class Kobuki:
     TUNING_CONSTANT = 0.00000275
-
-    frequencies_of_notes = {
-        48: 261.63, # C4
-        49: 277.18,
-        50: 293.66, # D4
-        51: 311.13,
-        52: 329.63, # E4
-        53: 349.23, # F4
-        54: 369.99,
-        55: 392.0,  # G4
-        56: 415.30,
-        57: 440.0, # A4
-        58: 466.16,
-        59: 493.88, # B4
-        60: 523.25, # C5
-    }
 
     def __init__(self):
         pass
@@ -87,6 +86,9 @@ class Kobuki:
 
     def __exit__(self, exc_type, exc_value, traceback):
         self.close()
+
+    def frequency_of_note(self, note):
+        return 2**((note-69)/12) * 440
 
     def connect(self):
         self.comm  = serial.Serial(
@@ -100,9 +102,8 @@ class Kobuki:
         self.comm.close()
 
     def bytes_of_note(self, note):
-        kobuki_encoded_note = int(round(1 / (self.frequencies_of_notes[note] *
+        kobuki_encoded_note = int(round(1 / (self.frequency_of_note(note) *
                                              self.TUNING_CONSTANT)))
-        print(kobuki_encoded_note)
 
         return kobuki_encoded_note.to_bytes(2, byteorder='little')
 
@@ -111,15 +112,12 @@ class Kobuki:
         for byte in bytearray:
             checksum = checksum ^ byte
 
-        print(checksum)
         return checksum
 
     def wrap_payload(self, payload):
         wrapped_payload = payload.copy()
         wrapped_payload.insert(0, len(payload))
         wrapped_payload.append(self.checksum(payload))
-
-        print(wrapped_payload)
 
         wrapped_payload.insert(0, 0x55)
         wrapped_payload.insert(0, 0xAA)
@@ -130,7 +128,6 @@ class Kobuki:
         payload = bytearray([0x03, 0x03])
 
         code_of_note = self.bytes_of_note(note)
-        print(code_of_note)
         payload.append(code_of_note[0])
         payload.append(code_of_note[1])
         payload.append(duration)
