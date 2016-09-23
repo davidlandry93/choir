@@ -8,10 +8,22 @@ import threading
 class SignerServer:
 
     class SignerServerHandler(socketserver.BaseRequestHandler):
-        def handle(self):
-            self.data = self.request.recv(2)
+        def __init__(self):
+            self.handle = None
 
+        def handle(self):
             print('Got event')
+            self.str_of_request = self.request.recv(8)
+
+            note = self.str_of_request[0:2]
+            start_or_stop = self.str_of_request[3]
+
+            if start_or_stop == '1':
+                if self.note_is_playing():
+                    self.stop_playing_note
+                self.start_playing_note(note)
+            elif start_or_stop == '0':
+                self.stop_playing_note()
 
         def start_playing_note(self, note):
             self.keep_playing = True
@@ -25,6 +37,9 @@ class SignerServer:
         def play_note_continuously(self, note):
             while self.keep_playing:
                 self.server.kobuki.play_note(note)
+
+        def note_is_playing(self):
+            return self.handle != None and self.keep_playing
 
     def __init__(self):
         pass
