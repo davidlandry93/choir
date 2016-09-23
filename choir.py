@@ -2,13 +2,13 @@
 import time
 import serial
 
-codes_of_notes = {'C': (0x01, 0x05),
-                'D': (0x01, 0x25),
-                'E': (0x01, 0x49),
-                'F': (0x01, 0x5D),
-                'G': (0x01, 0x88),
-                'A': (0x01, 0xB8),
-                'B': (0x01, 0xED)}
+codes_of_notes = {'C': (0x05, 0x6E),
+                'D': (0x04, 0xD6),
+                'E': (0x04, 0x4F),
+                'F': (0x04, 0x11),
+                'G': (0x03, 0xA0),
+                'A': (0x03, 0x3A),
+                'B': (0x02, 0xE0)}
 
 def checksum(bytearray):
     checksum = 0x00
@@ -60,6 +60,12 @@ print(kobuki.is_open)
 # Second byte: the size of the payload (3)
 # third and fourth bytes: the note to play
 # fifth byte: the duration in milis
-payload = payload_of_note('B', 255)
-kobuki.write(wrap_payload(payload))
+
+
+for _ in range(1000):
+    payload = wrap_payload(payload_of_note('B', 255))
+    kobuki.write(payload)
+    time.sleep(0.05)
+
+
 kobuki.close()
