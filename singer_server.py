@@ -114,5 +114,9 @@ class Kobuki:
         time.sleep(0.012)
 
 if __name__ == '__main__':
+
+    with Kobuki() as signer:
+        signer.play_note(50)
+
     with SignerServer() as server:
         server.serve()
