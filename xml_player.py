@@ -7,7 +7,10 @@ class SongParser:
         root = xml.etree.ElementTree.parse(filename).getroot()
         self.parsed_song = {}
         for track in root:
-            events = self._parse_events(track)
+            if track.tag == 'Track':
+                track_number = int(track.attrib['Number'])
+                if track_number not in [0, 1, 7, 11, 15]:
+                    self._parse_events(track)
 
         self.note_list = []
         for c in self.parsed_song:
