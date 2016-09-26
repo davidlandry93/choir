@@ -8,6 +8,12 @@ import threading
 class SignerServer:
 
     class SignerServerHandler(socketserver.BaseRequestHandler):
+        def setup(self):
+            self.start_blinking_led()
+
+        def finish(self):
+            self.stop_blinking_led()
+
         def handle(self):
             while True:
                 data = self.request.recv(2)
@@ -16,22 +22,13 @@ class SignerServer:
                     time.sleep(0.01)
                     continue
 
-                print('Got event')
-
-                print(data)
-                type(data)
-
                 note = (int.from_bytes(data, byteorder='big') & 0xFF00) >> 8
-                print(note)
 
                 start_or_stop = int.from_bytes(data, byteorder='big') & 0x00FF
-                print(start_or_stop)
-
-                print('{} note {}'.format(note, start_or_stop))
 
                 if start_or_stop == 1:
                     if self.note_is_playing():
-                        self.stop_playing_note
+                        self.stop_playing_note()
                     self.start_playing_note(note)
                 elif start_or_stop == 0:
                     self.stop_playing_note()
@@ -54,6 +51,20 @@ class SignerServer:
         def note_is_playing(self):
             return self.server.note_thread != None and self.server.keep_playing
 
+        def start_blinking_led(self):
+            self.server.keep_blinking = True
+            threading.Thread(target=self.blink_led_continuously)
+
+        def stop_blinking_led(self):
+            self.server.keep_blinking = False
+
+        def blink_led_continuously(self):
+            while self.server.keep_blinking:
+                self.server.kobuki.led_on()
+                time.sleep(1)
+                self.server.kobuki.led_off()
+                time.sleep(1)
+
     def __init__(self):
         pass
 
@@ -64,6 +75,7 @@ class SignerServer:
         self.server.kobuki.connect()
         self.server.kobuki.play_note(50)
         self.server.note_thread = None
+        self.server.keep_blinking = False
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
@@ -138,6 +150,20 @@ class Kobuki:
         payload = self.wrap_payload(self.payload_of_note(note, 20))
         self.comm.write(payload)
         time.sleep(0.012)
+
+    def payload_of_led(self):
+        return bytearray([0x0C, 0x02, 0x00, 0x02])
+
+    def led_on(self):
+        payload = self.wrap_payload(self.payload_of_led())
+        self.comm.write(payload)
+
+    def payload_of_led_off(self):
+        return bytearray([0x0C, 0x02, 0x00, 0x00])
+
+    def lef_off(self):
+        payload = self.wrap_payload(self.payload_of_led_off())
+        self.comm.write(payload)
 
 if __name__ == '__main__':
 
