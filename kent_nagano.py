@@ -5,17 +5,18 @@ import socket
 class KobukiToto():
 
     def __init__(self, number, ip , port):
+        print(ip, port)
         self.number = number
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.connect((ip, port))
 
     def play(self, note):
         self.socket.send(bytes([note['note'], 1]))
-        print("K%d:" % self.number, note)
+        # print("K%d:" % self.number, note)
 
     def stop(self, note):
         self.socket.send(bytes([note['note'], 0]))
-        print("K%d:" % self.number, note)
+        # print("K%d:" % self.number, note)
 
 class KentNagano:
 
@@ -51,13 +52,14 @@ class KentNagano:
 
 if __name__ == '__main__':
     notes = SongParser('./song.xml').note_list
+    print('playing %d notes' % len(notes))
     # notes = [{'type': 'on', 'note': 98, 'channel': 1, 'time': 1000},
     #          {'type': 'on', 'note': 98, 'channel': 2, 'time': 2000},
     #          {'type': 'off', 'note': 98, 'channel': 1,'time': 2500},
     #          {'type': 'off', 'note': 98, 'channel': 2, 'time': 2550}]
 
-    kobukis = [KobukiToto(i, '132.203.114.181', 1986) for i in range(1)]
-    # kobukis = [KobukiToto(i, '192.168.0.1%2d' % i, 2000) for i in range(12)]
+    # kobukis = [KobukiToto(i, '132.203.114.181', 1986) for i in range(1)]
+    kobukis = [KobukiToto(i, '192.168.0.1%02d' % i, 1986) for i in [9, 11]]
 
     kent = KentNagano(notes, kobukis)
     kent.play()
