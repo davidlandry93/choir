@@ -39,10 +39,8 @@ class SignerServer:
             self.server.note_thread.start()
 
         def stop_playing_note(self):
-            print('Setting keep playing to false')
             self.server.keep_playing = False
-            print('Done. Joining')
-            #self.server.note_thread.join()
+            self.server.note_thread.join()
 
         def play_note_continuously(self, note):
             while self.server.keep_playing:
@@ -60,9 +58,7 @@ class SignerServer:
 
         def blink_led_continuously(self):
             while self.server.keep_blinking:
-                self.server.kobuki.led_on()
-                time.sleep(1)
-                self.server.kobuki.led_off()
+                self.server.kobuki.toggle_led(1)
                 time.sleep(1)
 
     def __init__(self):
@@ -90,7 +86,7 @@ class Kobuki:
     TUNING_CONSTANT = 0.00000275
 
     def __init__(self):
-        pass
+        self.led_flags = 0x00
 
     def __enter__(self):
         self.connect()
@@ -152,17 +148,27 @@ class Kobuki:
         time.sleep(0.012)
 
     def payload_of_led(self):
-        return bytearray([0x0C, 0x02, 0x00, 0x02])
+        return bytearray([0x0C, 0x02, 0x00, self.led_flags])
 
-    def led_on(self):
+    def payload_of_leds_off(self):
+        return bytearray([0x0C, 0x02, 0x00, 0x00])
+
+    def toggle_led(self, led):
+        mask = 0x00
+        if led == 1:
+            mask = 0x02
+        elif led == 2:
+            mask = 0x08
+
+        self.led_flags = self.led_flags ^ mask
+        self.update_leds()
+
+    def update_leds(self):
         payload = self.wrap_payload(self.payload_of_led())
         self.comm.write(payload)
 
-    def payload_of_led_off(self):
-        return bytearray([0x0C, 0x02, 0x00, 0x00])
-
-    def lef_off(self):
-        payload = self.wrap_payload(self.payload_of_led_off())
+    def leds_off(self):
+        payload = self.wrap_payload(self.payload_of_leds_off())
         self.comm.write(payload)
 
 if __name__ == '__main__':
