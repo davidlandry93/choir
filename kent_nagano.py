@@ -17,8 +17,7 @@ class KobukiToto():
         return self
 
     def __exit__(self, e_type, value, traceback):
-        self.socket.send(bytearray([0xff, 0xff]))
-        self.socket.close()
+        self.close_connection()
 
     def play(self, note):
         self.socket.send(bytes([note['note'], 1]))
@@ -27,6 +26,10 @@ class KobukiToto():
     def stop(self, note):
         self.socket.send(bytes([note['note'], 0]))
         # print("K%d:" % self.number, note)
+
+    def close_connection(self):
+        self.socket.send(bytearray([0xff, 0xff]))
+        self.socket.close()
 
 class KentNagano:
 
@@ -64,7 +67,7 @@ if __name__ == '__main__':
     notes = SongParser('./song.xml').note_list
     print('playing %d notes' % len(notes))
 
-    kobukis = [KobukiToto(i, '192.168.0.1%02d' % i, 1986) for i in [15]]
+    kobukis = [KobukiToto(i, '192.168.0.1%02d' % i, 1986) for i in [0,1,2,3,4,5,6,7,8,9,11,12,13,14]]
 
     try:
         for kobuki in kobukis:
