@@ -8,13 +8,8 @@ import threading
 class SignerServer:
 
     class SignerServerHandler(socketserver.BaseRequestHandler):
-        def setup(self):
-            self.start_blinking_led()
-
-        def finish(self):
-            self.stop_blinking_led()
-
         def handle(self):
+            self.start_blinking_led()
             while True:
                 data = self.request.recv(2)
 
@@ -22,8 +17,10 @@ class SignerServer:
                     time.sleep(0.01)
                     continue
 
-                note = (int.from_bytes(data, byteorder='big') & 0xFF00) >> 8
+                if data == bytearray([0xff, 0xff]):
+                    break
 
+                note = (int.from_bytes(data, byteorder='big') & 0xFF00) >> 8
                 start_or_stop = int.from_bytes(data, byteorder='big') & 0x00FF
 
                 if start_or_stop == 1:
@@ -32,6 +29,8 @@ class SignerServer:
                     self.start_playing_note(note)
                 elif start_or_stop == 0:
                     self.stop_playing_note()
+
+            self.stop_blinking_led()
 
         def start_playing_note(self, note):
             self.server.keep_playing = True
@@ -51,7 +50,8 @@ class SignerServer:
 
         def start_blinking_led(self):
             self.server.keep_blinking = True
-            threading.Thread(target=self.blink_led_continuously)
+            blinking_thread = threading.Thread(target=self.blink_led_continuously)
+            blinking_thread.start()
 
         def stop_blinking_led(self):
             self.server.keep_blinking = False
@@ -60,6 +60,8 @@ class SignerServer:
             while self.server.keep_blinking:
                 self.server.kobuki.toggle_led(1)
                 time.sleep(1)
+
+            self.server.kobuki.leds_off()
 
     def __init__(self):
         pass
