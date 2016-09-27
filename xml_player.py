@@ -9,19 +9,20 @@ class SongParser:
         for track in root:
             if track.tag == 'Track':
                 track_number = int(track.attrib['Number'])
-                if track_number not in [0, 1, 7, 11, 15]:
-                    self._parse_events(track)
+                if track_number not in [0, 1, 2, 5, 7, 11, 13, 14, 15]:
+                    self._parse_events(track, track_number)
 
         self.note_list = []
         for c in self.parsed_song:
             for note in self.parsed_song[c]:
                 self.note_list.append(note)
-        self.note_list.sort(key=lambda x: x['time'], reverse=False)
+        self.note_list.sort(key=lambda x: (x['time'], x['type'] == 'on'), reverse=False)
 
 
-    def _parse_events(self, events):
+    def _parse_events(self, events, track_number):
         for e in events:
             e_parsed = {}
+            e_parsed['track'] = track_number
             channel_number = None
             for child in e:
                 if child.tag == 'Absolute':

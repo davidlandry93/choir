@@ -41,14 +41,14 @@ class KentNagano:
             note = self.notes.pop(0)
 
             if note['type'] == 'on':
-                if self.free_kobukis and (note['channel'], note['note']) not in self.tasks.keys():
+                if self.free_kobukis and (note['channel'], note['note'], note['track']) not in self.tasks.keys():
                     k = self.free_kobukis.pop(0)
                     k.play(note)
-                    self.tasks[(note['channel'], note['note'])] = k
+                    self.tasks[(note['channel'], note['note'], note['track'])] = k
 
             elif note['type'] == 'off':
                 try:
-                    k = self.tasks[(note['channel'], note['note'])] 
+                    k = self.tasks.pop((note['channel'], note['note'], note['track']))
                     k.stop(note)
                     self.free_kobukis.append(k)
                 except KeyError:
@@ -63,13 +63,8 @@ class KentNagano:
 if __name__ == '__main__':
     notes = SongParser('./song.xml').note_list
     print('playing %d notes' % len(notes))
-    # notes = [{'type': 'on', 'note': 98, 'channel': 1, 'time': 1000},
-    #          {'type': 'on', 'note': 98, 'channel': 2, 'time': 2000},
-    #          {'type': 'off', 'note': 98, 'channel': 1,'time': 2500},
-    #          {'type': 'off', 'note': 98, 'channel': 2, 'time': 2550}]
 
-    # kobukis = [KobukiToto(i, '132.203.114.181', 1986) for i in range(1)]
-    kobukis = [KobukiToto(i, '192.168.0.1%02d' % i, 1986) for i in [15]]
+    kobukis = [KobukiToto(i, '192.168.0.1%02d' % i, 1986) for i in [1, 2, 4, 5, 6, 9, 11, 14]]
 
     try:
         for kobuki in kobukis:
