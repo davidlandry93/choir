@@ -29,18 +29,23 @@ class SongParser:
                     e_parsed['time'] = int(child.text)
                 elif child.tag == 'NoteOn':
                     e_parsed['type'] = 'on'
-                    e_parsed['note'] = int(child.attrib['Note']) + 12
+                    note_number = int(child.attrib['Note'])
+                    e_parsed['note'] = note_number + 12 if track_number != 4 else note_number
                     channel_number = int(child.attrib['Channel'])
                     e_parsed['channel'] = channel_number
                 elif child.tag == 'NoteOff':
                     e_parsed['type'] = 'off'
-                    e_parsed['note'] = int(child.attrib['Note']) + 12
+                    note_number = int(child.attrib['Note'])
+                    e_parsed['note'] = note_number + 12 if track_number != 4 else note_number
                     channel_number = int(child.attrib['Channel'])
                     e_parsed['channel'] = channel_number
             if channel_number and 'type' in e_parsed:
                 if channel_number not in self.parsed_song:
                     self.parsed_song[channel_number] = []
                 self.parsed_song[channel_number].append(e_parsed)
+                if track_number == 6:
+                    self.parsed_song[channel_number].append(e_parsed)
+                    self.parsed_song[channel_number].append(e_parsed)
 
 
 if __name__ == '__main__':

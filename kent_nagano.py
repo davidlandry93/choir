@@ -74,6 +74,7 @@ if __name__ == '__main__':
             kobuki.__enter__()
 
         kent = KentNagano(notes, kobukis)
+        time.sleep(2)
         kent.play()
     except:
         raise
