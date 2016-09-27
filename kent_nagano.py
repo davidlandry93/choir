@@ -1,4 +1,5 @@
 from xml_player import SongParser
+import sys
 import time
 import socket
 
@@ -8,7 +9,16 @@ class KobukiToto():
         print(ip, port)
         self.number = number
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.socket.connect((ip, port))
+        self.ip = ip
+        self.port = port
+
+    def __enter__(self):
+        self.socket.connect((self.ip, self.port))
+        return self
+
+    def __exit__(self, e_type, value, traceback):
+        self.socket.send(bytearray([0xff, 0xff]))
+        self.socket.close()
 
     def play(self, note):
         self.socket.send(bytes([note['note'], 1]))
@@ -59,7 +69,16 @@ if __name__ == '__main__':
     #          {'type': 'off', 'note': 98, 'channel': 2, 'time': 2550}]
 
     # kobukis = [KobukiToto(i, '132.203.114.181', 1986) for i in range(1)]
-    kobukis = [KobukiToto(i, '192.168.0.1%02d' % i, 1986) for i in [9, 11]]
+    kobukis = [KobukiToto(i, '192.168.0.1%02d' % i, 1986) for i in [15]]
 
-    kent = KentNagano(notes, kobukis)
-    kent.play()
+    try:
+        for kobuki in kobukis:
+            kobuki.__enter__()
+
+        kent = KentNagano(notes, kobukis)
+        kent.play()
+    except:
+        raise
+    finally:
+        for kobuki in kobukis:
+            kobuki.__exit__(*sys.exc_info())
