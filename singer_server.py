@@ -4,25 +4,38 @@ import serial
 import socketserver
 import threading
 
+SONG_TIMEOUT = 60
 
 class SignerServer:
 
     class SignerServerHandler(socketserver.BaseRequestHandler):
         def handle(self):
             self.start_blinking_led()
+            time_last_data_received = time.time()
             while True:
+                # Read incoming data
                 data = self.request.recv(2)
 
+                # If there was no data start over
                 if not data:
-                    time.sleep(0.01)
-                    continue
+                    if time_last_data_received - time.time() > SONG_TIMEOUT:
+                        break
+                    else:
+                        time.sleep(0.01)
+                        continue
 
-                if data == bytearray([0xff, 0xff]):
+                time_last_data_received = time.time()
+
+                # If we got only ones, stop reading and clean up
+                if (data == bytearray([0xff, 0xff]) or
+                    time_last_data_received - time.time() > SONG_TIMEOUT):
                     break
 
+                # Read the values
                 note = (int.from_bytes(data, byteorder='big') & 0xFF00) >> 8
                 start_or_stop = int.from_bytes(data, byteorder='big') & 0x00FF
 
+                # Act accordingly.
                 if start_or_stop == 1:
                     if self.note_is_playing():
                         self.stop_playing_note()
@@ -30,14 +43,19 @@ class SignerServer:
                 elif start_or_stop == 0:
                     self.stop_playing_note()
 
+            # Clean everything up
+            if self.note_is_playing():
+                self.stop_playing_note()
             self.stop_blinking_led()
 
         def start_playing_note(self, note):
             self.server.keep_playing = True
+            self.server.kobuki.toggle_led(2)
             self.server.note_thread = threading.Thread(target=self.play_note_continuously, args=(note,))
             self.server.note_thread.start()
 
         def stop_playing_note(self):
+            self.server.kobuki.toggle_led(2)
             self.server.keep_playing = False
             self.server.note_thread.join()
 
@@ -160,7 +178,7 @@ class Kobuki:
         if led == 1:
             mask = 0x02
         elif led == 2:
-            mask = 0x08
+            mask = 0x04
 
         self.led_flags = self.led_flags ^ mask
         self.update_leds()

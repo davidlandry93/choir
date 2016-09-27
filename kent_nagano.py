@@ -64,7 +64,7 @@ if __name__ == '__main__':
     notes = SongParser('./song.xml').note_list
     print('playing %d notes' % len(notes))
 
-    kobukis = [KobukiToto(i, '192.168.0.1%02d' % i, 1986) for i in [1, 2, 4, 5, 6, 9, 11, 14]]
+    kobukis = [KobukiToto(i, '192.168.0.1%02d' % i, 1986) for i in [15]]
 
     try:
         for kobuki in kobukis:
